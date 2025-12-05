@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>فحص حظ ببجي — PUBG Luck Checker (تسلية)</title>
+<style>
+  body{font-family: Inter, "Segoe UI", Tahoma, sans-serif;background:#0f1724;color:#e6eef8;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px}
+  .card{width:100%;max-width:760px;background:linear-gradient(180deg,#071028 0%, #07182b 100%);border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,.6);padding:22px}
+  h1{margin:0 0 6px;font-size:20px;text-align:center}
+  p.lead{margin:0 0 18px;text-align:center;opacity:.8}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center;margin-bottom:18px}
+  input[type="text"]{flex:1;min-width:180px;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);color:inherit}
+  button{padding:10px 16px;border-radius:10px;border:0;background:linear-gradient(90deg,#06b6d4,#3b82f6);color:#021026;font-weight:700;cursor:pointer}
+  button:active{transform:translateY(1px)}
+  .console{background:#00101a;padding:12px;border-radius:8px;height:180px;overflow:auto;font-family:monospace;font-size:13px;color:#9be7ff}
+  .progress-wrap{height:14px;background:rgba(255,255,255,.04);border-radius:8px;margin:12px 0;overflow:hidden}
+  .progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#34d399,#60a5fa);transition:width .3s ease}
+  .result{margin-top:12px;padding:14px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.03)}
+  .score{font-size:28px;font-weight:800;margin:6px 0}
+  .tips{margin-top:8px;color:#cfefff;opacity:.9}
+  .muted{opacity:.7;font-size:13px;margin-top:8px}
+  .small{font-size:12px;color:#9ad7ff}
+  footer{margin-top:12px;text-align:center;font-size:12px;color:#9ad7ff;opacity:.8}
+</style>
+</head>
+<body>
+  <div class="card" role="main">
+    <h1>فحص حظ ببجي — PUBG Luck Checker</h1>
+    <p class="lead">ادخل اسم اللاعب أو معرف (اختياري) واضغط فحص — هذه أداة ترفيهية لتوليد نتيجة متسقة ومقنعة.</p>
+
+    <div class="row">
+      <input id="playerId" placeholder="اكتب اسم اللاعب أو معرفه (مثال: Ahmed123)" />
+      <button id="startBtn">ابدأ الفحص</button>
+    </div>
+
+    <div class="progress-wrap" aria-hidden>
+      <div id="progress" class="progress-bar"></div>
+    </div>
+
+    <div class="console" id="logWindow" aria-live="polite">
+      <!-- سجلات الفحص -->
+    </div>
+
+    <div class="result" id="resultBox" style="display:none">
+      <div class="small">نتيجة الفحص (تقديرية)</div>
+      <div class="score" id="scoreText">--</div>
+      <div class="tips" id="tipsText"></div>
+      <div class="muted">ملاحظة: هذا فحص ترفيهي ولا يتصل بخوادم PUBG.</div>
+    </div>
+
+    <footer>صنع لأغراض ترفيهية — استخدمه كأداة محتوى/تحدي فقط</footer>
+  </div>
+
+<script>
+/* مولد عشوائي متسق (Mulberry32) ليعطي نفس النتيجة لنفس المعرف */
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+}
+
+/* تحويل نص لمفتاح رقمي بسيط */
+function hashStringToInt(s){
+  let h=2166136261|0;
+  for(let i=0;i<s.length;i++){
+    h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  }
+  return h >>> 0;
+}
+
+/* عناصر */
+const startBtn = document.getElementById('startBtn');
+const logWindow = document.getElementById('logWindow');
+const progressBar = document.getElementById('progress');
+const resultBox = document.getElementById('resultBox');
+const scoreText = document.getElementById('scoreText');
+const tipsText = document.getElementById('tipsText');
+const playerInput = document.getElementById('playerId');
+
+function log(msg){
+  const ts = new Date().toLocaleTimeString();
+  logWindow.innerHTML += `<div>[${ts}] ${msg}</div>`;
+  logWindow.scrollTop = logWindow.scrollHeight;
+}
+
+/* خطوات محاكاة الفحص */
+function simulateScan(seedStr){
+  logWindow.innerHTML = '';
+  resultBox.style.display='none';
+  progressBar.style.width='0%';
+
+  // استخدم الهاش كمفتاح لمولد عشوائي متسق
+  const seed = hashStringToInt(seedStr || (Date.now().toString() + Math.random()));
+  const rand = mulberry32(seed);
+
+  const steps = [
+    {text: 'الاتصال بخادم الفحص...', delay: 800},
+    {text: 'تحليل بيانات الجلسات السابقة...', delay: 1000},
+    {text: 'جمع معلومات عناصر اللعبة (سلاح — دروع — عمليات)', delay: 1200},
+    {text: 'حساب معدل القتل وفرص الصدفة...', delay: 1100},
+    {text: 'تحليل حظ السحب في الصناديق...', delay: 1400},
+    {text: 'تحليل الشبكة وعامل الحظ الحالي...', delay: 900},
+    {text: 'إنشاء تقرير نهائي...', delay: 800}
+  ];
+
+  let accumulated = 0;
+  let progress = 0;
+
+  function nextStep(i){
+    if(i >= steps.length) return finish();
+    const s = steps[i];
+    log(s.text);
+    // زيادة تقدم عشوائية لكن متسقة
+    progress += 100 * (0.9 * (i+1)/steps.length + 0.1*rand());
+    if(progress>100) progress=100;
+    progressBar.style.width = Math.min(progress, 99) + '%';
+    setTimeout(()=> nextStep(i+1), s.delay + Math.floor(rand()*700));
+  }
+
+  function finish(){
+    progressBar.style.width = '100%';
+    // توليد نتيجة "الحظ" من 0-100 مع توزيع جميل
+    const raw = Math.floor( Math.min(100, Math.round((rand()*0.6 + Math.pow(rand(),1.6)*0.4) * 100)) );
+    // ممكن نغير لو سأل المستخدم عن نوع (صناديق/سواحل) — حاليا عام
+    const score = raw;
+    setTimeout(()=>{
+      showResult(score, rand);
+    }, 700);
+  }
+
+  // ابدأ
+  setTimeout(()=> nextStep(0), 400);
+}
+
+/* عرض النتيجة ونصائح */
+function showResult(score, rand){
+  resultBox.style.display='block';
+  scoreText.textContent = score + " / 100";
+
+  // نصائح عشوائية لكن منطقية
+  const tipsPool = [
+    "حظك جيد — ركز على لعب بوت أولا ثم ادخل مباريات فردية.",
+    "حظك متوسط — جرب فتح صناديق أثناء الأحداث لتحسين فرصك.",
+    "حظك ضعيف — جرّب التبديل لأسلحة مختلفة وزد من لعب الفرق.",
+    "حظك ممتاز — ممكن تفتح صناديق نادرة في هذه الجلسة!",
+    "احتمال السحب النادر قليل — نصيحتي انتظر حدث خصم أو ترقية."
+  ];
+
+  const tip = tipsPool[Math.floor(rand()*tipsPool.length)];
+  tipsText.textContent = tip;
+
+  log("تم إنشاء التقرير النهائي.");
+  log("نصيحة: هذه نتيجة ترفيهية. لا يمكننا الوصول لحسابك الحقيقي أو تغيير فرص السحب.");
+}
+
+/* زر البداية */
+startBtn.addEventListener('click', ()=>{
+  const id = (playerInput.value || '').trim();
+  // استخدم المعرف لو موجود عشان النتيجة تكون متسقة لنفس الاسم
+  const seedStr = id.length ? id.toLowerCase() : String(Date.now());
+  log("بدء فحص حظ اللاعب " + (id || "عشوائي"));
+  simulateScan(seedStr);
+});
+</script>
+</body>
+  </html>
